@@ -19,27 +19,10 @@ A backend service built with Node.js, Express, TypeScript, and Prisma (SQLite) t
 
 ## Environment Variables
 
-Create a `.env` file in the root folder. You can use the values below:
+Copy the `.env.example` file to `.env` in the root folder and fill in your actual credentials:
 
-```ini
-PORT=3000
-NODE_ENV=development
-DATABASE_URL="file:./dev.db"
-JWT_SECRET="development-jwt-signing-secret"
-
-# Groq API Configuration
-GROQ_API_KEY="gsk_your_real_groq_api_key"
-GROQ_MODEL="llama-3.3-70b-versatile"
-
-# Resend API Configuration
-RESEND_API_KEY="re_your_real_resend_api_key"
-SENDER_EMAIL="onboarding@resend.dev"
-
-# Evaluation metadata
-CANDIDATE_NAME="John Doe"
-CANDIDATE_EMAIL="john@example.com"
-REPOSITORY_URL="https://github.com/galaxy-grid/hintro-assignment"
-DEPLOYED_URL="https://hintro-meeting-intelligence.up.railway.app"
+```bash
+cp .env.example .env
 ```
 
 ---
@@ -106,12 +89,40 @@ For full details, please refer to the Swagger documentation at `/api-docs`.
 
 ---
 
-## Deployment Instructions
+## Deployment Instructions (Render)
 
-The project can be deployed easily on **Railway**, **Render**, or **Fly.io**:
-1. Connect your Github repository.
-2. Configure the production Environment Variables in the platform dash.
-3. Configure start scripts:
-   - Build command: `npm run build && npx prisma generate`
-   - Start command: `npx prisma migrate deploy && npm start`
-4. For SQLite deployment, map a persistent storage volume to save the SQLite file, or swap the datasource provider in `prisma/schema.prisma` to PostgreSQL for database durability.
+Follow these instructions to deploy the application on **Render**:
+
+1. **Create a New Web Service**:
+   - Connect your GitHub repository to Render.
+   - Choose **Node** as the runtime.
+
+2. **Configure Build & Start Settings**:
+   - **Build Command**:
+     ```bash
+     npm install && npx prisma generate && npm run build
+     ```
+   - **Start Command**:
+     ```bash
+     npx prisma db push && npm start
+     ```
+
+3. **Configure Environment Variables**:
+   Add the following variables in the **Environment** section of your Render settings:
+   - `PORT`: The port the server should run on (e.g. `3000`, Render will automatically assign this if omitted).
+   - `NODE_ENV`: Set to `production`.
+   - `DATABASE_URL`: Set to `file:./dev.db` (for SQLite local storage).
+   - `JWT_SECRET`: A secure random string used to sign JWT session tokens.
+   - `GROQ_API_KEY`: Your Groq Cloud API key.
+   - `GROQ_MODEL`: The Groq model to run (e.g., `llama-3.3-70b-versatile`).
+   - `RESEND_API_KEY`: Your Resend API key for email notifications.
+   - `SENDER_EMAIL`: The verified domain sender email configured in Resend (e.g., `notifications@yourdomain.com`).
+   - `CANDIDATE_NAME`: Your name.
+   - `CANDIDATE_EMAIL`: Your contact email.
+   - `REPOSITORY_URL`: The URL of your GitHub repository.
+   - `DEPLOYED_URL`: The live URL assigned by Render (e.g., `https://your-service.onrender.com`).
+
+4. **Persistence (Optional)**:
+   - Since the application uses SQLite, any writes to `dev.db` will be wiped on redeployment or restart unless you mount a persistent disk volume on Render (e.g., at `/opt/render/project/src/prisma/` or another location, updating `DATABASE_URL` path accordingly).
+   - Alternatively, you can change the provider in `prisma/schema.prisma` to `postgresql` and link it to a Render PostgreSQL instance for full data durability.
+
