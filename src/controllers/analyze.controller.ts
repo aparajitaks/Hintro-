@@ -58,9 +58,9 @@ export async function analyzeMeeting(req: Request, res: Response, next: NextFunc
       const analysis = await tx.analysis.create({
         data: {
           meetingId: meeting.id,
-          summary: JSON.stringify(analysisResult.summary),
-          decisions: JSON.stringify(analysisResult.decisions),
-          followUps: JSON.stringify(analysisResult.followUps)
+          summary: analysisResult.summary, // Pass as native JSON
+          decisions: analysisResult.decisions, // Pass as native JSON
+          followUps: analysisResult.followUps // Pass as native JSON
         }
       });
 
@@ -73,7 +73,7 @@ export async function analyzeMeeting(req: Request, res: Response, next: NextFunc
             data: {
               task: item.task,
               assignee: item.assignee.toLowerCase().trim(),
-              citations: JSON.stringify(item.citations),
+              citations: item.citations, // Pass as native JSON
               status: 'PENDING',
               dueDate: defaultDueDate,
               meetingId: meeting.id,
@@ -86,7 +86,7 @@ export async function analyzeMeeting(req: Request, res: Response, next: NextFunc
       return { analysis, actionItems };
     });
 
-    // Format output matching requirements (parse serialized citations)
+    // Format output matching requirements
     const formattedPayload = {
       summary: analysisResult.summary,
       decisions: analysisResult.decisions,
@@ -97,7 +97,7 @@ export async function analyzeMeeting(req: Request, res: Response, next: NextFunc
         assignee: item.assignee,
         status: item.status,
         dueDate: item.dueDate,
-        citations: JSON.parse(item.citations)
+        citations: item.citations as any // Read directly as native JSON
       }))
     };
 

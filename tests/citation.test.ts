@@ -21,7 +21,7 @@ describe('Citation Validation Service Tests', () => {
       data: {
         title: 'Validation Demo',
         meetingDate: new Date(),
-        participants: JSON.stringify([]),
+        participants: [], // Pass array directly
         ownerId: userId
       }
     });

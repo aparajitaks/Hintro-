@@ -66,7 +66,7 @@ describe('Meetings API Integration Tests', () => {
       data: {
         title: 'Sprint Planning',
         meetingDate: new Date('2026-06-05T10:00:00Z'),
-        participants: JSON.stringify(['alice@company.com']),
+        participants: ['alice@company.com'], // Pass array directly
         ownerId: userId
       }
     });
@@ -87,7 +87,7 @@ describe('Meetings API Integration Tests', () => {
       data: {
         title: 'Alice Meeting',
         meetingDate: new Date(),
-        participants: JSON.stringify(['alice@test.com']),
+        participants: ['alice@test.com'], // Pass array directly
         ownerId: userId
       }
     });
@@ -97,7 +97,7 @@ describe('Meetings API Integration Tests', () => {
       data: {
         title: 'Bob Meeting',
         meetingDate: new Date(),
-        participants: JSON.stringify(['bob@test.com']),
+        participants: ['bob@test.com'], // Pass array directly
         ownerId: userId
       }
     });
@@ -127,7 +127,7 @@ describe('Meetings API Integration Tests', () => {
       data: {
         title: 'Past Meeting',
         meetingDate: new Date('2026-06-04T10:00:00Z'),
-        participants: JSON.stringify(['charlie@test.com']),
+        participants: ['charlie@test.com'], // Pass array directly
         ownerId: userId
       }
     });
@@ -137,7 +137,7 @@ describe('Meetings API Integration Tests', () => {
       data: {
         title: 'Future Meeting',
         meetingDate: new Date('2026-06-12T10:00:00Z'),
-        participants: JSON.stringify(['charlie@test.com']),
+        participants: ['charlie@test.com'], // Pass array directly
         ownerId: userId
       }
     });

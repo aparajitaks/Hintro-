@@ -1,14 +1,14 @@
 # Hintro Meeting Intelligence Service
 
-A backend service built with Node.js, Express, TypeScript, and Prisma (SQLite) that handles meeting management, extracts transcript-based insights (summaries, decisions, action items, and follow-ups) using Groq API, validates citations in a two-layer grounding system, and dispatches email notifications for overdue action items via Resend.
+A backend service built with Node.js, Express, TypeScript, and Prisma (PostgreSQL) that handles meeting management, extracts transcript-based insights (summaries, decisions, action items, and follow-ups) using Groq API, validates citations in a two-layer grounding system, and dispatches email notifications for overdue action items via Resend.
 
 ---
 
 ## Technical Stack
 * **Runtime**: Node.js (v22.14.0+)
 * **Framework**: Express.js with TypeScript
-* **ORM & Database**: Prisma ORM with SQLite
-* **LLM Orchestrator**: Groq SDK (`llama-3.3-70b-versatile` or similar)
+* **ORM & Database**: Prisma ORM with PostgreSQL
+* **LLM Orchestrator**: Groq SDK (`llama-3.3-70b-versatile`)
 * **Email Service**: Resend API
 * **Scheduler**: node-cron
 * **Validation**: Zod schema middleware
@@ -25,6 +25,11 @@ Copy the `.env.example` file to `.env` in the root folder and fill in your actua
 cp .env.example .env
 ```
 
+Ensure `DATABASE_URL` is set in the following PostgreSQL format:
+```ini
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DATABASE_NAME?schema=public"
+```
+
 ---
 
 ## Local Execution Steps
@@ -36,23 +41,27 @@ Follow these instructions to start the service locally:
 npm install
 ```
 
-### 2. Run Database Migrations
-This will create the SQLite local database file `dev.db` and generate the Prisma Client:
+### 2. Set Up PostgreSQL Database
+Install PostgreSQL locally, create a database named `meeting_intelligence`, and set your `DATABASE_URL` in your `.env` file accordingly.
+
+### 3. Run Database Migrations
+Generate the Prisma Client and sync the database schema:
 ```bash
-npx prisma migrate dev --name init
+npm run db:generate
+npm run db:migrate -- --name init
 ```
 
-### 3. Run in Development Mode
-Starts the server with nodemon tracking live typescript modifications:
+### 4. Run in Development Mode
+Starts the server with nodemon tracking live TypeScript modifications:
 ```bash
 npm run dev
 ```
 The server will boot on `http://localhost:3000`.
 
-### 4. API Documentation
+### 5. API Documentation
 Navigate to [http://localhost:3000/api-docs](http://localhost:3000/api-docs) to interact with endpoints via Swagger UI.
 
-### 5. Running Tests
+### 6. Running Tests
 Runs 17+ integration and unit tests covering JWT auth, pagination filters, schema parsers, citation validators, and idempotency scheduler states:
 ```bash
 npm run test
@@ -77,7 +86,7 @@ For full details, please refer to the Swagger documentation at `/api-docs`.
 * **List Meetings**: `GET /api/meetings`
   * Supports pagination (`page`, `limit`) and filtering by `participantEmail` or date ranges (`startDate`/`endDate`).
 
-### AI meeting Analysis
+### AI Meeting Analysis
 * **Trigger Analysis**: `POST /api/meetings/:id/analyze`
   * Interacts with Groq API, validates structure with Zod, checks citation timestamps against actual transcript segments in the database, saves findings, and automatically populates the `ActionItem` table.
 
@@ -89,40 +98,38 @@ For full details, please refer to the Swagger documentation at `/api-docs`.
 
 ---
 
-## Deployment Instructions (Render)
+## Deployment Instructions
 
-Follow these instructions to deploy the application on **Render**:
-
+### Deploying on Render
 1. **Create a New Web Service**:
    - Connect your GitHub repository to Render.
    - Choose **Node** as the runtime.
-
-2. **Configure Build & Start Settings**:
+2. **Database Provisioning**:
+   - Create a PostgreSQL database instance in the Render dashboard.
+   - Copy the database's **Internal Database URL**.
+3. **Configure Build & Start Settings**:
    - **Build Command**:
      ```bash
      npm install && npx prisma generate && npm run build
      ```
    - **Start Command**:
      ```bash
-     npx prisma db push && npm start
+     npx prisma migrate deploy && npm start
      ```
-
-3. **Configure Environment Variables**:
-   Add the following variables in the **Environment** section of your Render settings:
-   - `PORT`: The port the server should run on (e.g. `3000`, Render will automatically assign this if omitted).
-   - `NODE_ENV`: Set to `production`.
-   - `DATABASE_URL`: Set to `file:./dev.db` (for SQLite local storage).
-   - `JWT_SECRET`: A secure random string used to sign JWT session tokens.
+4. **Configure Environment Variables**:
+   Add the following variables in the **Environment** section:
+   - `DATABASE_URL`: Set to the PostgreSQL Internal Database URL.
+   - `JWT_SECRET`: A secure signing token.
    - `GROQ_API_KEY`: Your Groq Cloud API key.
-   - `GROQ_MODEL`: The Groq model to run (e.g., `llama-3.3-70b-versatile`).
    - `RESEND_API_KEY`: Your Resend API key for email notifications.
-   - `SENDER_EMAIL`: The verified domain sender email configured in Resend (e.g., `notifications@yourdomain.com`).
-   - `CANDIDATE_NAME`: Your name.
-   - `CANDIDATE_EMAIL`: Your contact email.
-   - `REPOSITORY_URL`: The URL of your GitHub repository.
-   - `DEPLOYED_URL`: The live URL assigned by Render (e.g., `https://your-service.onrender.com`).
+   - `SENDER_EMAIL`: The verified domain sender email configured in Resend.
+   - Other metadata keys (`CANDIDATE_NAME`, `CANDIDATE_EMAIL`, etc.).
 
-4. **Persistence (Optional)**:
-   - Since the application uses SQLite, any writes to `dev.db` will be wiped on redeployment or restart unless you mount a persistent disk volume on Render (e.g., at `/opt/render/project/src/prisma/` or another location, updating `DATABASE_URL` path accordingly).
-   - Alternatively, you can change the provider in `prisma/schema.prisma` to `postgresql` and link it to a Render PostgreSQL instance for full data durability.
-
+### Deploying on Railway
+1. **Create a New Project**:
+   - Connect your GitHub repository to Railway.
+2. **Database Provisioning**:
+   - Add a PostgreSQL plugin to your Railway project. Railway will automatically inject the `DATABASE_URL` environment variable.
+3. **Configure Build & Start Commands**:
+   - Prepend database migrations before booting the server:
+     `npx prisma migrate deploy && npm start`

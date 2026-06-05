@@ -22,7 +22,7 @@ describe('Overdue Reminder Job Integration Tests', () => {
       data: {
         title: 'Overdue Standup',
         meetingDate: new Date(),
-        participants: JSON.stringify(['assignee@test.com']),
+        participants: ['assignee@test.com'], // Pass array directly
         ownerId: userId
       }
     });
@@ -36,7 +36,7 @@ describe('Overdue Reminder Job Integration Tests', () => {
         status: 'PENDING',
         dueDate: new Date(Date.now() - 60 * 60 * 1000), // 1 hour ago
         meetingId,
-        citations: JSON.stringify([]),
+        citations: [], // Pass array directly
         creatorId: userId
       }
     });

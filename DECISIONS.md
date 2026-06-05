@@ -4,15 +4,15 @@ This document logs the core architectural decisions made during the implementati
 
 ---
 
-## 1. Database Choice: SQLite with Prisma ORM
-* **Choice**: SQLite
+## 1. Database Choice: PostgreSQL with Prisma ORM
+* **Choice**: PostgreSQL
 * **Why**:
-  SQLite was chosen to minimize the setup friction for evaluators. It is a file-based, zero-configuration SQL engine, meaning the database runs instantly without requiring the evaluator to spin up local PostgreSQL clusters or Docker containers. We paired it with **Prisma ORM**, which generates clean types and makes the database schema fully portable. If this service needs to scale, replacing `"sqlite"` with `"postgresql"` in `prisma/schema.prisma` is a one-line change.
+  PostgreSQL is a production-ready, highly reliable relational database. It natively supports concurrent writes (crucial for executing scheduled background cron tasks and serving concurrent API queries simultaneously without database lock issues). It also natively supports rich JSON data types (`jsonb`), which allows storing structured summaries, decisions, follow-ups, and citation arrays directly inside database fields. Using **Prisma ORM** decoupled our application logic from the database, meaning migrating from SQLite to PostgreSQL only required changing the schema provider and datasource URL—with zero changes required in controllers or business logic flow.
 * **Alternatives Considered**:
-  * *PostgreSQL*: Production-ready and supports rich jsonb fields natively. However, it introduces configuration hurdles (connection strings, background processes) for the reviewer.
-  * *MongoDB*: Flexible for unstructured transcripts, but fails to enforce relational constraints between Users, Meetings, and Action Items.
+  * *SQLite*: Great for zero-setup local reviews but poorly suited for concurrent scheduling tasks or persistent cloud deployments on Render/Railway.
+  * *MongoDB*: Flexible for transcripts, but lacks relational integrity between Users, Meetings, and Action Items.
 * **Trade-offs**:
-  Prisma on SQLite does not support native `Json` columns or scalar lists. We bypassed this by serializing participants arrays and citation arrays into JSON strings in the controller layer. This trade-off is minor and keeps the engine fully SQL-compatible.
+  Requires a PostgreSQL database host running locally for execution, which increases local developer configuration requirements slightly.
 
 ---
 

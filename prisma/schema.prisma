@@ -1,5 +1,5 @@
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -21,7 +21,7 @@ model Meeting {
   id           String              @id @default(uuid())
   title        String
   meetingDate  DateTime
-  participants String              // Serialized JSON array of strings (emails)
+  participants Json                // Native JSON array of strings (emails)
   transcript   TranscriptSegment[]
   analysis     Analysis?
   actionItems  ActionItem[]
@@ -47,9 +47,9 @@ model Analysis {
   id        String   @id @default(uuid())
   meetingId String   @unique
   meeting   Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
-  summary   String   // Serialized JSON list of objects: { text: string, citations: { timestamp: string }[] }
-  decisions String   // Serialized JSON list of objects: { text: string, citations: { timestamp: string }[] }
-  followUps String   // Serialized JSON list of objects: { text: string, citations: { timestamp: string }[] }
+  summary   Json     // Native JSON list of objects: { text: string, citations: { timestamp: string }[] }
+  decisions Json     // Native JSON list of objects: { text: string, citations: { timestamp: string }[] }
+  followUps Json     // Native JSON list of objects: { text: string, citations: { timestamp: string }[] }
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -58,7 +58,7 @@ model ActionItem {
   id        String            @id @default(uuid())
   task      String
   assignee  String            // Email address of assignee
-  citations String            // Serialized JSON list of objects: { timestamp: string }[]
+  citations Json              // Native JSON list of objects: { timestamp: string }[]
   status    String            // PENDING, IN_PROGRESS, COMPLETED
   dueDate   DateTime
   meetingId String

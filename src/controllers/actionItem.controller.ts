@@ -68,16 +68,13 @@ export async function createActionItem(req: Request, res: Response, next: NextFu
         assignee: assignee.toLowerCase().trim(),
         dueDate: new Date(dueDate),
         meetingId,
-        citations: JSON.stringify(citations),
+        citations: citations, // Pass directly as native JSON
         status: 'PENDING',
         creatorId: userId
       }
     });
 
-    sendSuccess(res, {
-      ...actionItem,
-      citations: JSON.parse(actionItem.citations)
-    }, 201);
+    sendSuccess(res, actionItem, 201);
   } catch (error) {
     next(error);
   }
@@ -123,10 +120,7 @@ export async function updateStatus(req: Request, res: Response, next: NextFuncti
       data: { status: targetStatus }
     });
 
-    sendSuccess(res, {
-      ...updatedItem,
-      citations: JSON.parse(updatedItem.citations)
-    });
+    sendSuccess(res, updatedItem);
   } catch (error) {
     next(error);
   }
@@ -159,12 +153,7 @@ export async function listActionItems(req: Request, res: Response, next: NextFun
       orderBy: { createdAt: 'desc' }
     });
 
-    const formattedItems = items.map((item) => ({
-      ...item,
-      citations: JSON.parse(item.citations)
-    }));
-
-    sendSuccess(res, formattedItems);
+    sendSuccess(res, items);
   } catch (error) {
     next(error);
   }
@@ -192,12 +181,7 @@ export async function getOverdueActionItems(req: Request, res: Response, next: N
       }
     });
 
-    const formattedItems = items.map((item) => ({
-      ...item,
-      citations: JSON.parse(item.citations)
-    }));
-
-    sendSuccess(res, formattedItems);
+    sendSuccess(res, items);
   } catch (error) {
     next(error);
   }

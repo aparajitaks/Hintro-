@@ -41,7 +41,6 @@ export async function createMeeting(req: Request, res: Response, next: NextFunct
     const userId = req.user!.userId;
 
     const normalizedParticipants = participants.map((email: string) => email.toLowerCase().trim());
-    const serializedParticipants = JSON.stringify(normalizedParticipants);
 
     // Save in transactional block
     const meeting = await prisma.$transaction(async (tx) => {
@@ -49,7 +48,7 @@ export async function createMeeting(req: Request, res: Response, next: NextFunct
         data: {
           title,
           meetingDate: new Date(meetingDate),
-          participants: serializedParticipants,
+          participants: normalizedParticipants, // Save as native JSON array
           ownerId: userId
         }
       });
@@ -77,12 +76,7 @@ export async function createMeeting(req: Request, res: Response, next: NextFunct
       }
     });
 
-    const formattedMeeting = {
-      ...completeMeeting,
-      participants: JSON.parse(completeMeeting!.participants)
-    };
-
-    sendSuccess(res, formattedMeeting, 201);
+    sendSuccess(res, completeMeeting, 201);
   } catch (error) {
     next(error);
   }
@@ -109,18 +103,7 @@ export async function getMeeting(req: Request, res: Response, next: NextFunction
       throw new NotFoundError('Meeting not found');
     }
 
-    const formattedMeeting = {
-      ...meeting,
-      participants: JSON.parse(meeting.participants),
-      analysis: meeting.analysis ? {
-        ...meeting.analysis,
-        summary: JSON.parse(meeting.analysis.summary),
-        decisions: JSON.parse(meeting.analysis.decisions),
-        followUps: JSON.parse(meeting.analysis.followUps)
-      } : null
-    };
-
-    sendSuccess(res, formattedMeeting);
+    sendSuccess(res, meeting);
   } catch (error) {
     next(error);
   }
@@ -136,9 +119,9 @@ export async function listMeetings(req: Request, res: Response, next: NextFuncti
     const where: any = { ownerId: userId };
 
     if (participantEmail) {
-      // Query SQLite text field containing serialized JSON representation
+      // Query PostgreSQL JSON column containing array using array_contains
       where.participants = {
-        contains: `"${participantEmail.toLowerCase().trim()}"`
+        array_contains: participantEmail.toLowerCase().trim()
       };
     }
 
@@ -163,23 +146,12 @@ export async function listMeetings(req: Request, res: Response, next: NextFuncti
       })
     ]);
 
-    const formattedMeetings = meetings.map((meeting) => ({
-      ...meeting,
-      participants: JSON.parse(meeting.participants),
-      analysis: meeting.analysis ? {
-        ...meeting.analysis,
-        summary: JSON.parse(meeting.analysis.summary),
-        decisions: JSON.parse(meeting.analysis.decisions),
-        followUps: JSON.parse(meeting.analysis.followUps)
-      } : null
-    }));
-
     sendSuccess(res, {
       total,
       page,
       limit,
       totalPages: Math.ceil(total / limit),
-      meetings: formattedMeetings
+      meetings
     });
   } catch (error) {
     next(error);
