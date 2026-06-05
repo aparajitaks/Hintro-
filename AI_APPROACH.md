@@ -30,7 +30,7 @@ We check the shape of the raw JSON response using a Zod schema (`analysisRespons
 
 #### Layer 2 Part 2: DB Citation Verification (`CitationValidator`)
 Once the JSON schema is verified, we cross-check all citation timestamps against the database.
-- We fetch all valid segment timestamps for the meeting from SQLite.
+- We fetch all valid segment timestamps for the meeting from PostgreSQL.
 - We iterate over every summary, decision, suggestion, and action item in the AI response.
 - We check if the cited timestamp exists in the database.
 - If a timestamp is invalid (hallucinated):

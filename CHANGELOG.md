@@ -19,5 +19,5 @@ All notable changes to this project will be documented in this file.
 - **Request Traceability**: Trace ID propagation middleware using `AsyncLocalStorage` and structured JSON logs (Winston).
 - **API Documentation**: Publicly accessible Swagger OpenAPI interactive interface served at `/api-docs`.
 - **Health Checks**: Express health probes `/health` and candidate parameters metadata `/api/evaluation`.
-- **Database System**: Configured SQLite engine and migrations using Prisma ORM.
+- **Database System**: Configured PostgreSQL engine and migrations using Prisma ORM.
 - **Testing**: Built 17 automated integration and unit test cases using Jest and Supertest.

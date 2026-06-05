@@ -6,7 +6,7 @@ This document outlines the testing strategy, scenarios executed, edge cases hand
 
 ## 1. Test Scenarios Executed
 
-We implemented 17 integration and unit tests using **Jest** and **Supertest**. Tests run against an isolated SQLite database file `test.db`.
+We implemented 17 integration and unit tests using **Jest** and **Supertest**. Tests run against an isolated PostgreSQL database defined by the connection string.
 
 ### 1. Authentication (`tests/auth.test.ts`)
 - **User Registration**: Verifies that a user can register successfully, passwords are encrypted, and database records are created.
@@ -38,7 +38,7 @@ We implemented 17 integration and unit tests using **Jest** and **Supertest**. T
 1. **Stuck Reminder Recovery**: If the service crashes or terminates while sending an email, the database status remains `IN_PROGRESS`. The job checks the `updatedAt` timestamp: if it's older than 5 minutes, it resets it and retries, preventing infinite lockouts.
 2. **Invalid Request Body Parser**: Malformed JSON sent in HTTP requests is caught by Express and formatted as a unified error response with a trace ID.
 3. **Sequential Status Enforcement**: When patching action items, the controller checks that transitions progress linearly (`PENDING` &rarr; `IN_PROGRESS` &rarr; `COMPLETED`). Direct jumps (`PENDING` &rarr; `COMPLETED`) or regression requests are blocked.
-4. **Isolated Test Database**: We use a distinct SQLite database `test.db` which is initialized and wiped clean before each test block to ensure zero interference with development logs.
+4. **Isolated Test Database**: We use a distinct PostgreSQL database which is initialized and wiped clean before each test block to ensure zero interference with development logs.
 
 ---
 
