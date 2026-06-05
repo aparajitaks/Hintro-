@@ -1,0 +1,86 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                 String       @id @default(uuid())
+  email              String       @unique
+  passwordHash       String
+  meetings           Meeting[]
+  actionItemsCreated ActionItem[] @relation("CreatedActionItems")
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+}
+
+model Meeting {
+  id           String              @id @default(uuid())
+  title        String
+  meetingDate  DateTime
+  participants String              // Serialized JSON array of strings (emails)
+  transcript   TranscriptSegment[]
+  analysis     Analysis?
+  actionItems  ActionItem[]
+  ownerId      String
+  owner        User                @relation(fields: [ownerId], references: [id])
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+}
+
+model TranscriptSegment {
+  id        String   @id @default(uuid())
+  meetingId String
+  meeting   Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  timestamp String   // Format: "MM:SS" or "HH:MM:SS"
+  speaker   String
+  text      String
+  createdAt DateTime @default(now())
+
+  @@index([meetingId, timestamp])
+}
+
+model Analysis {
+  id        String   @id @default(uuid())
+  meetingId String   @unique
+  meeting   Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  summary   String   // Serialized JSON list of objects: { text: string, citations: { timestamp: string }[] }
+  decisions String   // Serialized JSON list of objects: { text: string, citations: { timestamp: string }[] }
+  followUps String   // Serialized JSON list of objects: { text: string, citations: { timestamp: string }[] }
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ActionItem {
+  id        String            @id @default(uuid())
+  task      String
+  assignee  String            // Email address of assignee
+  citations String            // Serialized JSON list of objects: { timestamp: string }[]
+  status    String            // PENDING, IN_PROGRESS, COMPLETED
+  dueDate   DateTime
+  meetingId String
+  meeting   Meeting           @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  creatorId String
+  creator   User              @relation("CreatedActionItems", fields: [creatorId], references: [id])
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  reminders ReminderHistory[]
+}
+
+model ReminderHistory {
+  id              String     @id @default(uuid())
+  actionItemId    String
+  actionItem      ActionItem @relation(fields: [actionItemId], references: [id], onDelete: Cascade)
+  status          String     // PENDING, IN_PROGRESS, SENT, FAILED
+  retryCount      Int        @default(0)
+  lastAttemptedAt DateTime   @default(now())
+  errorDetails    String?
+  idempotencyKey  String     @unique // "actionItemId:YYYY-MM-DD"
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@index([actionItemId])
+}
