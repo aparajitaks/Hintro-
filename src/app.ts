@@ -23,6 +23,9 @@ app.use(traceMiddleware);
 setupSwagger(app);
 
 // Public health and evaluation metadata endpoints
+app.get('/', (req, res) => {
+  res.redirect('/api-docs');
+});
 app.get('/health', getHealth);
 app.get('/api/evaluation', getEvaluation);
 
