@@ -10,6 +10,7 @@ import {
 } from '../controllers/actionItem.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import { validate } from '../middlewares/validate.middleware';
+import { processOverdueReminders } from '../jobs/reminder.job';
 
 const router = Router();
 
@@ -158,5 +159,32 @@ router.get('/overdue', getOverdueActionItems);
  *         description: Action item not found
  */
 router.patch('/:id/status', validate(updateStatusSchema), updateStatus);
+
+/**
+ * @openapi
+ * /api/action-items/trigger-reminders:
+ *   post:
+ *     summary: Manually trigger the scan of overdue action items and send reminders
+ *     tags: [Action Items]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Reminders scan triggered successfully
+ *       401:
+ *         description: Unauthorized
+ */
+router.post('/trigger-reminders', async (req, res, next) => {
+  try {
+    await processOverdueReminders();
+    res.status(200).json({
+      traceId: req.headers['x-trace-id'] || 'trace-system',
+      success: true,
+      data: { message: 'Overdue reminder processing triggered successfully.' }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
 export default router;

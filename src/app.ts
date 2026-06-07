@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
 import { traceMiddleware } from './middlewares/trace.middleware';
 import { errorMiddleware } from './middlewares/error.middleware';
 import authRoutes from './routes/auth.routes';
@@ -23,9 +24,6 @@ app.use(traceMiddleware);
 setupSwagger(app);
 
 // Public health and evaluation metadata endpoints
-app.get('/', (req, res) => {
-  res.redirect('/api-docs');
-});
 app.get('/health', getHealth);
 app.get('/api/evaluation', getEvaluation);
 
@@ -33,6 +31,21 @@ app.get('/api/evaluation', getEvaluation);
 app.use('/api/auth', authRoutes);
 app.use('/api/meetings', meetingRoutes);
 app.use('/api/action-items', actionItemRoutes);
+
+// Serve React Frontend Static Files in Production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../client/dist')));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/api-docs')) {
+      return next();
+    }
+    res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+  });
+} else {
+  app.get('/', (req, res) => {
+    res.redirect('/api-docs');
+  });
+}
 
 // Centralized error handling middleware (must be registered last)
 app.use(errorMiddleware);

@@ -95,7 +95,8 @@ export async function getMeeting(req: Request, res: Response, next: NextFunction
             timestamp: 'asc'
           }
         },
-        analysis: true
+        analysis: true,
+        actionItems: true
       }
     });
 
