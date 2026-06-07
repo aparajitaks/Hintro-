@@ -3,6 +3,7 @@ import cors from 'cors';
 import path from 'path';
 import { traceMiddleware } from './middlewares/trace.middleware';
 import { errorMiddleware } from './middlewares/error.middleware';
+import { globalLimiter } from './middlewares/rateLimiter.middleware';
 import authRoutes from './routes/auth.routes';
 import meetingRoutes from './routes/meeting.routes';
 import actionItemRoutes from './routes/actionItem.routes';
@@ -19,6 +20,9 @@ app.use(express.json());
 
 // Trace ID extraction and context propagation middleware
 app.use(traceMiddleware);
+
+// Apply global rate limiting to all requests
+app.use(globalLimiter);
 
 // Configure dynamic Swagger API documentation served at /api-docs
 setupSwagger(app);

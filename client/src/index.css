@@ -257,6 +257,21 @@ h1, h2, h3, h4, h5, h6 {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spin-animation {
+  animation: spin 1s linear infinite;
+}
+
+/* Glassmorphic Dropzone drag-active */
+.dropzone-active {
+  border-color: hsl(var(--primary)) !important;
+  background: hsla(var(--primary-glow) / 0.3) !important;
+  box-shadow: 0 0 20px hsl(var(--primary) / 0.15) !important;
+}
+
 /* Badges */
 .badge {
   font-size: 0.75rem;

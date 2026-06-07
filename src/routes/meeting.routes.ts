@@ -1,20 +1,82 @@
 import { Router } from 'express';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 import {
   createMeeting,
   getMeeting,
   listMeetings,
   createMeetingSchema,
   listMeetingsSchema,
-  getMeetingSchema
+  getMeetingSchema,
+  transcribeMeetingAudio
 } from '../controllers/meeting.controller';
 import { analyzeMeeting, analyzeMeetingSchema } from '../controllers/analyze.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import { validate } from '../middlewares/validate.middleware';
+import { analyzeLimiter } from '../middlewares/rateLimiter.middleware';
 
 const router = Router();
 
 // Secure all routes in this module
 router.use(authMiddleware);
+
+// Configure multer storage for audio uploads
+const uploadDir = path.join(__dirname, '../../uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + '-' + file.originalname);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['.mp3', '.wav', '.m4a', '.mp4'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowedTypes.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only MP3, WAV, M4A, and MP4 files are allowed.'));
+    }
+  }
+});
+
+/**
+ * @openapi
+ * /api/meetings/transcribe:
+ *   post:
+ *     summary: Transcribe meeting audio file using Groq Whisper API
+ *     tags: [Meetings]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               audio:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Audio file transcribed successfully
+ *       400:
+ *         description: Invalid input parameters or file formats
+ *       401:
+ *         description: Unauthorized
+ */
+router.post('/transcribe', upload.single('audio'), transcribeMeetingAudio);
 
 /**
  * @openapi
@@ -169,6 +231,6 @@ router.get('/:id', validate(getMeetingSchema), getMeeting);
  *       404:
  *         description: Meeting not found
  */
-router.post('/:id/analyze', validate(analyzeMeetingSchema), analyzeMeeting);
+router.post('/:id/analyze', analyzeLimiter, validate(analyzeMeetingSchema), analyzeMeeting);
 
 export default router;

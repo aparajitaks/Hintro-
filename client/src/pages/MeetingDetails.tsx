@@ -5,6 +5,7 @@ import {
   MessageSquare, ClipboardList, RefreshCw, Sparkles, Clock, AlertCircle
 } from 'lucide-react';
 import api from '../services/api';
+import { useToast } from '../context/ToastContext';
 
 interface TranscriptSegment {
   id: string;
@@ -44,6 +45,7 @@ interface MeetingDetailsData {
 export const MeetingDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const toast = useToast();
   
   const [meeting, setMeeting] = useState<MeetingDetailsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -116,9 +118,9 @@ export const MeetingDetails: React.FC = () => {
     } catch (err: any) {
       console.error(err);
       if (err.response && err.response.data && err.response.data.error) {
-        alert(err.response.data.error.message || 'Illegal state transition.');
+        toast.error(err.response.data.error.message || 'Illegal state transition.');
       } else {
-        alert('Failed to update action item status.');
+        toast.error('Failed to update action item status.');
       }
     } finally {
       setActionItemUpdating(null);

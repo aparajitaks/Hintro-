@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { register, login, registerSchema, loginSchema } from '../controllers/auth.controller';
 import { validate } from '../middlewares/validate.middleware';
+import { authLimiter } from '../middlewares/rateLimiter.middleware';
 
 const router = Router();
 
@@ -34,7 +35,7 @@ const router = Router();
  *       409:
  *         description: Email conflict
  */
-router.post('/register', validate(registerSchema), register);
+router.post('/register', authLimiter, validate(registerSchema), register);
 
 /**
  * @openapi
@@ -65,6 +66,6 @@ router.post('/register', validate(registerSchema), register);
  *       401:
  *         description: Unauthorized credentials
  */
-router.post('/login', validate(loginSchema), login);
+router.post('/login', authLimiter, validate(loginSchema), login);
 
 export default router;

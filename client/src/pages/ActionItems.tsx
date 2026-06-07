@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { 
-  ListTodo, CheckCircle2, Clock, Mail, 
+  ListTodo, CheckCircle2, Clock, 
   RefreshCw, Check, ShieldAlert, Play
 } from 'lucide-react';
 import api from '../services/api';
+import { useToast } from '../context/ToastContext';
 
 interface ActionItem {
   id: string;
@@ -22,8 +23,8 @@ export const ActionItems: React.FC = () => {
   const [items, setItems] = useState<ActionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [triggeringReminders, setTriggeringReminders] = useState(false);
-  const [reminderMessage, setReminderMessage] = useState<string | null>(null);
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
+  const toast = useToast();
 
   const fetchActionItems = async () => {
     try {
@@ -43,13 +44,12 @@ export const ActionItems: React.FC = () => {
 
   const handleSimulateReminders = async () => {
     setTriggeringReminders(true);
-    setReminderMessage(null);
     try {
       await api.post('/action-items/trigger-reminders');
-      setReminderMessage('Scan completed successfully! Check the server logs to view queued or sent emails.');
+      toast.success('Scan completed successfully! Check the server logs to view queued or sent emails.');
     } catch (err: any) {
       console.error(err);
-      setReminderMessage('Reminder trigger failed. Check server console for error logs.');
+      toast.error('Reminder trigger failed. Check server console for error logs.');
     } finally {
       setTriggeringReminders(false);
     }
@@ -71,7 +71,7 @@ export const ActionItems: React.FC = () => {
       await fetchActionItems();
     } catch (err: any) {
       console.error(err);
-      alert(err.response?.data?.error?.message || 'Illegal status transition.');
+      toast.error(err.response?.data?.error?.message || 'Illegal status transition.');
     } finally {
       setUpdatingItemId(null);
     }
@@ -124,12 +124,6 @@ export const ActionItems: React.FC = () => {
         </button>
       </div>
 
-      {reminderMessage && (
-        <div className="glass-card fade-in" style={styles.notificationAlert}>
-          <Mail size={18} color="hsl(160, 84%, 39%)" />
-          <span>{reminderMessage}</span>
-        </div>
-      )}
 
       {/* Grid containing categories */}
       <div style={styles.itemsGrid}>

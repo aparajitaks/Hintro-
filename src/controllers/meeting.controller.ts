@@ -1,8 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../utils/db';
 import { sendSuccess } from '../utils/response';
-import { NotFoundError } from '../utils/errors';
+import { NotFoundError, ValidationError } from '../utils/errors';
 import { z } from 'zod';
+import fs from 'fs';
+import { AIService } from '../services/ai.service';
+import { logger } from '../utils/logger';
 
 export const createMeetingSchema = {
   body: z.object({
@@ -154,6 +157,33 @@ export async function listMeetings(req: Request, res: Response, next: NextFuncti
       totalPages: Math.ceil(total / limit),
       meetings
     });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function transcribeMeetingAudio(req: Request, res: Response, next: NextFunction) {
+  try {
+    if (!req.file) {
+      throw new ValidationError('Please upload an audio file.');
+    }
+
+    const filePath = req.file.path;
+
+    try {
+      const segments = await AIService.transcribeAudio(filePath);
+      
+      // Delete temporary file from uploads/
+      fs.unlink(filePath, (err) => {
+        if (err) logger.error('Failed to delete temp file', { filePath, error: err.message });
+      });
+
+      sendSuccess(res, segments);
+    } catch (err) {
+      // Clean up file if transcription failed
+      fs.unlink(filePath, () => {});
+      throw err;
+    }
   } catch (error) {
     next(error);
   }

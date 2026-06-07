@@ -1,5 +1,6 @@
 import Groq from 'groq-sdk';
 import { z } from 'zod';
+import fs from 'fs';
 import { CitationValidator } from './citationValidator';
 import { logger } from '../utils/logger';
 
@@ -191,5 +192,33 @@ ${formattedTranscript}`;
     }
 
     throw new Error('Failed to generate meeting analysis with valid Zod structure and database-grounded citations.');
+  }
+
+  /**
+   * Transcribes audio files using Groq Whisper API and maps segment offsets to timestamps.
+   */
+  static async transcribeAudio(filePath: string): Promise<{ timestamp: string; speaker: string; text: string }[]> {
+    logger.info('Starting audio transcription using Groq Whisper API', { filePath });
+
+    const response = await groq.audio.transcriptions.create({
+      file: fs.createReadStream(filePath),
+      model: 'whisper-large-v3',
+      response_format: 'verbose_json',
+    });
+
+    const segments = (response as any).segments || [];
+    
+    return segments.map((seg: any) => {
+      const startSec = Math.round(seg.start || 0);
+      const minutes = Math.floor(startSec / 60);
+      const seconds = startSec % 60;
+      const formattedTimestamp = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      
+      return {
+        timestamp: formattedTimestamp,
+        speaker: 'Speaker', // Default placeholder speaker
+        text: seg.text.trim()
+      };
+    });
   }
 }

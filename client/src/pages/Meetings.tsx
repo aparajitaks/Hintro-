@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Calendar, Users, FileText, Trash2, ChevronRight, Brain, AlertCircle, FileDown } from 'lucide-react';
+import { Plus, Calendar, Users, FileText, Trash2, ChevronRight, Brain, AlertCircle, FileDown, UploadCloud, RefreshCw as LoaderIcon } from 'lucide-react';
 import api from '../services/api';
+import { useToast } from '../context/ToastContext';
 
 interface Meeting {
   id: string;
@@ -34,6 +35,12 @@ const BOARD_TEMPLATE = [
 
 export const Meetings: React.FC = () => {
   const navigate = useNavigate();
+  const toast = useToast();
+  
+  // Audio upload state
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [dragOver, setDragOver] = useState(false);
   
   // Meeting list states
   const [meetings, setMeetings] = useState<Meeting[]>([]);
@@ -127,6 +134,74 @@ export const Meetings: React.FC = () => {
       setMeetingDate(new Date().toISOString().substring(0, 16));
       setParticipants(['sarah@example.com', 'dave@example.com']);
       setTranscript(BOARD_TEMPLATE);
+    }
+  };
+
+  const handleAudioUpload = async (file: File) => {
+    // Validate file size (10MB limit)
+    const MAX_SIZE = 10 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      toast.error('File size exceeds the 10MB limit.');
+      return;
+    }
+
+    // Validate file type
+    const acceptedExtensions = ['.mp3', '.wav', '.m4a', '.mp4'];
+    const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+    if (!acceptedExtensions.includes(fileExtension)) {
+      toast.error('Invalid file format. Please upload .mp3, .wav, .m4a, or .mp4');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('audio', file);
+
+    setIsTranscribing(true);
+    toast.info('Uploading audio for transcription...');
+    
+    try {
+      const response = await api.post('/meetings/transcribe', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      const segments = response.data.data;
+      if (segments && segments.length > 0) {
+        setTranscript(segments);
+        toast.success(`Audio transcribed successfully! Loaded ${segments.length} segments.`);
+      } else {
+        toast.warning('Transcription succeeded, but no segments were detected.');
+      }
+    } catch (err: any) {
+      console.error(err);
+      const errMsg = err.response?.data?.error?.message || 'Failed to transcribe audio. Please try again.';
+      toast.error(errMsg);
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(true);
+  };
+
+  const onDragLeave = () => {
+    setDragOver(false);
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleAudioUpload(e.dataTransfer.files[0]);
+    }
+  };
+
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      handleAudioUpload(e.target.files[0]);
     }
   };
 
@@ -262,6 +337,44 @@ export const Meetings: React.FC = () => {
                     </button>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Audio Upload Dropzone */}
+            <div style={styles.uploadSection}>
+              <label className="input-label">Auto-Transcribe Meeting Audio (Optional, Max 10MB)</label>
+              <div 
+                className={`glass-card dropzone ${dragOver ? 'dropzone-active' : ''}`}
+                style={{
+                  ...styles.dropzone,
+                  ...(dragOver ? styles.dropzoneActive : {}),
+                }}
+                onDragOver={onDragOver}
+                onDragLeave={onDragLeave}
+                onDrop={onDrop}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  style={{ display: 'none' }} 
+                  accept=".mp3,.wav,.m4a,.mp4"
+                  onChange={onFileChange}
+                  disabled={isTranscribing}
+                />
+                {isTranscribing ? (
+                  <div style={styles.dropzoneContent}>
+                    <LoaderIcon className="spin-animation" size={32} color="hsl(var(--primary))" />
+                    <span style={styles.dropzoneText}>Transcribing audio with Whisper API...</span>
+                    <span style={styles.dropzoneSubText}>This might take a few seconds depending on audio length.</span>
+                  </div>
+                ) : (
+                  <div style={styles.dropzoneContent}>
+                    <UploadCloud size={32} color="hsl(var(--text-muted))" />
+                    <span style={styles.dropzoneText}>Drag & drop meeting audio, or click to browse</span>
+                    <span style={styles.dropzoneSubText}>Supports .mp3, .wav, .m4a, and .mp4 (up to 10MB)</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -689,6 +802,44 @@ const styles = {
     padding: '0.5rem 1rem',
     fontSize: '0.85rem',
     marginTop: '0.5rem',
+  },
+  uploadSection: {
+    marginTop: '1.5rem',
+    marginBottom: '1.5rem',
+  },
+  dropzone: {
+    border: '2px dashed hsl(var(--border-color))',
+    borderRadius: 'var(--radius-lg)',
+    padding: '2rem',
+    textAlign: 'center' as const,
+    cursor: 'pointer',
+    background: 'hsla(var(--bg-card) / 0.3)',
+    transition: 'var(--transition-smooth)',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '0.75rem',
+  },
+  dropzoneActive: {
+    borderColor: 'hsl(var(--primary))',
+    background: 'hsla(var(--primary-glow) / 0.3)',
+    boxShadow: '0 0 20px hsl(var(--primary) / 0.15)',
+  },
+  dropzoneContent: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+    gap: '0.5rem',
+  },
+  dropzoneText: {
+    fontSize: '0.95rem',
+    fontWeight: 500,
+    color: 'hsl(var(--text-main))',
+  },
+  dropzoneSubText: {
+    fontSize: '0.8rem',
+    color: 'hsl(var(--text-muted))',
   },
   formActions: {
     display: 'flex',
