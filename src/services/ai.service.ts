@@ -54,7 +54,8 @@ export class AIService {
   static async analyzeTranscript(
     meetingId: string,
     title: string,
-    transcriptSegments: { timestamp: string; speaker: string; text: string }[]
+    transcriptSegments: { timestamp: string; speaker: string; text: string }[],
+    participants: string[]
   ): Promise<AnalysisResponse> {
     
     // LAYER 1: Prompt-level Grounding
@@ -64,6 +65,7 @@ export class AIService {
       .join('\n');
 
     const systemPrompt = `You are a professional Meeting Intelligence AI designed to analyze transcripts and output raw JSON.
+You are given a list of valid participant email addresses for this meeting: [${participants.join(', ')}].
 You are given a transcript as a numbered, indexed structure. Your goal is to extract:
 1. Meeting Summary: Core discussion themes and updates.
 2. Decisions: Concrete decisions made by the team.
@@ -79,7 +81,8 @@ CRITICAL CITATION RULES:
 CRITICAL GROUNDING RULES (HALLUCINATION PREVENTION):
 - Restrict all generated insights to the provided transcript.
 - DO NOT invent attendees, assignees, action items, or decisions.
-- DO NOT assume or extrapolate. If an assignee is mentioned for a task, use their name. If not explicitly assigned, use their speaker name if they agreed to do it.
+- DO NOT assume or extrapolate. 
+- The 'assignee' field in 'actionItems' MUST be the exact email address of the assignee chosen from the valid participant email addresses list: [${participants.join(', ')}]. Map any speaker name, name mentions, or pronouns in the transcript to their corresponding email address.
 - DO NOT invent timestamps. Fabricating timestamps will result in validation failure.
 
 Your response MUST be a valid JSON object conforming exactly to this structure:
@@ -94,7 +97,7 @@ Your response MUST be a valid JSON object conforming exactly to this structure:
     { "text": "Detailed follow-up suggestion", "citations": [{ "timestamp": "00:15" }] }
   ],
   "actionItems": [
-    { "task": "Task description", "assignee": "Assignee name", "citations": [{ "timestamp": "00:20" }] }
+    { "task": "Task description", "assignee": "assignee@example.com", "citations": [{ "timestamp": "00:20" }] }
   ]
 }`;
 

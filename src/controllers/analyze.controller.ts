@@ -40,7 +40,8 @@ export async function analyzeMeeting(req: Request, res: Response, next: NextFunc
     const analysisResult = await AIService.analyzeTranscript(
       meeting.id,
       meeting.title,
-      meeting.transcript
+      meeting.transcript,
+      Array.isArray(meeting.participants) ? (meeting.participants as string[]) : []
     );
 
     // 3. Save findings in transaction
