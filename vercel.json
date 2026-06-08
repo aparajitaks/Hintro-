@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api"
+    },
+    {
+      "source": "/api-docs(.*)",
+      "destination": "/api"
+    },
+    {
+      "source": "/health",
+      "destination": "/api"
+    },
+    {
+      "source": "/((?!api|api-docs|health).*)",
+      "destination": "/index.html"
+    }
+  ]
+}
