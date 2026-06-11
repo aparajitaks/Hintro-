@@ -38,6 +38,12 @@ export const getMeetingSchema = {
   })
 };
 
+export const deleteMeetingSchema = {
+  params: z.object({
+    id: z.string().uuid('Invalid meeting ID format')
+  })
+};
+
 export async function createMeeting(req: Request, res: Response, next: NextFunction) {
   try {
     const { title, participants, meetingDate, transcript } = req.body;
@@ -184,6 +190,27 @@ export async function transcribeMeetingAudio(req: Request, res: Response, next: 
       fs.unlink(filePath, () => {});
       throw err;
     }
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function deleteMeeting(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.userId;
+
+    const meeting = await prisma.meeting.findFirst({
+      where: { id, ownerId: userId }
+    });
+
+    if (!meeting) {
+      throw new NotFoundError('Meeting not found');
+    }
+
+    await prisma.meeting.delete({ where: { id } });
+
+    sendSuccess(res, { id });
   } catch (error) {
     next(error);
   }
