@@ -336,5 +336,91 @@ describe('Meetings API Integration Tests', () => {
 
     expect(res.status).toBe(404);
   });
+
+  it('should delete an action item and return its id', async () => {
+    const meeting = await prisma.meeting.create({
+      data: {
+        title: 'Meeting For Action Item Delete',
+        meetingDate: new Date('2026-06-05T10:00:00Z'),
+        participants: ['alice@company.com'],
+        ownerId: userId
+      }
+    });
+
+    const item = await prisma.actionItem.create({
+      data: {
+        task: 'Write release notes',
+        assignee: 'alice@company.com',
+        dueDate: new Date('2026-06-12T10:00:00Z'),
+        status: 'PENDING',
+        citations: [],
+        meetingId: meeting.id,
+        creatorId: userId
+      }
+    });
+
+    const res = await request(app)
+      .delete(`/api/action-items/${item.id}`)
+      .set(getHeaders());
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.id).toBe(item.id);
+
+    const deleted = await prisma.actionItem.findUnique({ where: { id: item.id } });
+    expect(deleted).toBeNull();
+  });
+
+  it('should return 404 when deleting an action item that does not exist', async () => {
+    const fakeId = '00000000-0000-0000-0000-000000000000';
+    const res = await request(app)
+      .delete(`/api/action-items/${fakeId}`)
+      .set(getHeaders());
+
+    expect(res.status).toBe(404);
+    expect(res.body.success).toBe(false);
+  });
+
+  it('should return 404 when deleting an action item belonging to another user\'s meeting', async () => {
+    const otherUser = await prisma.user.create({
+      data: { email: 'actiondelete_other@example.com', passwordHash: 'x' }
+    });
+
+    const otherMeeting = await prisma.meeting.create({
+      data: {
+        title: 'Other User Meeting',
+        meetingDate: new Date(),
+        participants: ['other@example.com'],
+        ownerId: otherUser.id
+      }
+    });
+
+    const item = await prisma.actionItem.create({
+      data: {
+        task: 'Task I cannot delete',
+        assignee: 'other@example.com',
+        dueDate: new Date('2026-06-12T10:00:00Z'),
+        status: 'PENDING',
+        citations: [],
+        meetingId: otherMeeting.id,
+        creatorId: otherUser.id
+      }
+    });
+
+    const res = await request(app)
+      .delete(`/api/action-items/${item.id}`)
+      .set(getHeaders());
+
+    expect(res.status).toBe(404);
+  });
+
+  it('should return 400 when delete id is not a valid UUID', async () => {
+    const res = await request(app)
+      .delete('/api/action-items/not-a-uuid')
+      .set(getHeaders());
+
+    expect(res.status).toBe(400);
+  });
 });
+
 

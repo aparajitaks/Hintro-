@@ -4,9 +4,11 @@ import {
   updateStatus,
   listActionItems,
   getOverdueActionItems,
+  deleteActionItem,
   createActionItemSchema,
   updateStatusSchema,
-  listActionItemsSchema
+  listActionItemsSchema,
+  deleteActionItemSchema
 } from '../controllers/actionItem.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import { validate } from '../middlewares/validate.middleware';
@@ -186,5 +188,31 @@ router.post('/trigger-reminders', async (req, res, next) => {
     next(error);
   }
 });
+
+/**
+ * @openapi
+ * /api/action-items/{id}:
+ *   delete:
+ *     summary: Delete an action item by ID
+ *     tags: [Action Items]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: UUID of the action item to delete
+ *     responses:
+ *       200:
+ *         description: Action item deleted successfully
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Action item not found
+ */
+router.delete('/:id', validate(deleteActionItemSchema), deleteActionItem);
 
 export default router;

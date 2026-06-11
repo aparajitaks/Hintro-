@@ -37,6 +37,12 @@ export const listActionItemsSchema = {
   })
 };
 
+export const deleteActionItemSchema = {
+  params: z.object({
+    id: z.string().uuid('Invalid action item ID format')
+  })
+};
+
 export async function createActionItem(req: Request, res: Response, next: NextFunction) {
   try {
     const { task, assignee, dueDate, meetingId, citations } = req.body;
@@ -186,3 +192,30 @@ export async function getOverdueActionItems(req: Request, res: Response, next: N
     next(error);
   }
 }
+
+export async function deleteActionItem(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.userId;
+
+    const item = await prisma.actionItem.findFirst({
+      where: {
+        id,
+        meeting: {
+          ownerId: userId
+        }
+      }
+    });
+
+    if (!item) {
+      throw new NotFoundError('Action item not found or associated meeting not owned by you');
+    }
+
+    await prisma.actionItem.delete({ where: { id } });
+
+    sendSuccess(res, { id });
+  } catch (error) {
+    next(error);
+  }
+}
+
