@@ -44,6 +44,20 @@ export const deleteMeetingSchema = {
   })
 };
 
+export const updateMeetingSchema = {
+  params: z.object({
+    id: z.string().uuid('Invalid meeting ID format')
+  }),
+  body: z.object({
+    title: z.string().min(1, 'Meeting title cannot be empty').optional(),
+    participants: z.array(z.string().email('Invalid participant email')).min(1, 'At least one participant is required').optional(),
+    meetingDate: z.string().datetime('Invalid ISO date format').optional()
+  }).refine(
+    (data) => Object.keys(data).length > 0,
+    { message: 'At least one field must be provided for update' }
+  )
+};
+
 export async function createMeeting(req: Request, res: Response, next: NextFunction) {
   try {
     const { title, participants, meetingDate, transcript } = req.body;
@@ -215,3 +229,47 @@ export async function deleteMeeting(req: Request, res: Response, next: NextFunct
     next(error);
   }
 }
+
+export async function updateMeeting(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.userId;
+
+    const meeting = await prisma.meeting.findFirst({
+      where: { id, ownerId: userId },
+      include: { analysis: true }
+    });
+
+    if (!meeting) {
+      throw new NotFoundError('Meeting not found');
+    }
+
+    if (meeting.analysis) {
+      throw new ValidationError('Cannot update a meeting that has already been analyzed');
+    }
+
+    const { title, participants, meetingDate } = req.body;
+
+    const data: Record<string, any> = {};
+    if (title !== undefined) data.title = title;
+    if (meetingDate !== undefined) data.meetingDate = new Date(meetingDate);
+    if (participants !== undefined) {
+      data.participants = participants.map((email: string) => email.toLowerCase().trim());
+    }
+
+    const updated = await prisma.meeting.update({
+      where: { id },
+      data,
+      include: {
+        transcript: { orderBy: { timestamp: 'asc' } },
+        analysis: true,
+        actionItems: true
+      }
+    });
+
+    sendSuccess(res, updated);
+  } catch (error) {
+    next(error);
+  }
+}
+

@@ -225,4 +225,116 @@ describe('Meetings API Integration Tests', () => {
 
     expect(res.status).toBe(404);
   });
+
+  it('should update meeting title, date, and participants before analysis', async () => {
+    const meeting = await prisma.meeting.create({
+      data: {
+        title: 'Old Title',
+        meetingDate: new Date('2026-06-05T10:00:00Z'),
+        participants: ['alice@company.com'],
+        ownerId: userId
+      }
+    });
+
+    const res = await request(app)
+      .patch(`/api/meetings/${meeting.id}`)
+      .set(getHeaders())
+      .send({
+        title: 'New Title',
+        meetingDate: '2026-06-10T09:00:00.000Z',
+        participants: ['bob@company.com', 'carol@company.com']
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.title).toBe('New Title');
+    expect(res.body.data.meetingDate).toBe('2026-06-10T09:00:00.000Z');
+    expect(res.body.data.participants).toEqual(['bob@company.com', 'carol@company.com']);
+  });
+
+  it('should allow partial update (title only)', async () => {
+    const meeting = await prisma.meeting.create({
+      data: {
+        title: 'Original Title',
+        meetingDate: new Date('2026-06-05T10:00:00Z'),
+        participants: ['alice@company.com'],
+        ownerId: userId
+      }
+    });
+
+    const res = await request(app)
+      .patch(`/api/meetings/${meeting.id}`)
+      .set(getHeaders())
+      .send({ title: 'Updated Title Only' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.title).toBe('Updated Title Only');
+    expect(res.body.data.participants).toEqual(['alice@company.com']); // unchanged
+  });
+
+  it('should return 400 when trying to update a meeting that has already been analyzed', async () => {
+    const meeting = await prisma.meeting.create({
+      data: {
+        title: 'Analyzed Meeting',
+        meetingDate: new Date('2026-06-05T10:00:00Z'),
+        participants: ['alice@company.com'],
+        ownerId: userId,
+        analysis: {
+          create: {
+            summary: [],
+            decisions: [],
+            followUps: []
+          }
+        }
+      }
+    });
+
+    const res = await request(app)
+      .patch(`/api/meetings/${meeting.id}`)
+      .set(getHeaders())
+      .send({ title: 'Should Fail' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
+
+  it('should return 400 when patch body is empty', async () => {
+    const meeting = await prisma.meeting.create({
+      data: {
+        title: 'Some Meeting',
+        meetingDate: new Date(),
+        participants: ['alice@company.com'],
+        ownerId: userId
+      }
+    });
+
+    const res = await request(app)
+      .patch(`/api/meetings/${meeting.id}`)
+      .set(getHeaders())
+      .send({});
+
+    expect(res.status).toBe(400);
+  });
+
+  it('should return 404 when patching a meeting owned by another user', async () => {
+    const otherUser = await prisma.user.create({
+      data: { email: 'patchother@example.com', passwordHash: 'x' }
+    });
+    const meeting = await prisma.meeting.create({
+      data: {
+        title: 'Not Mine',
+        meetingDate: new Date(),
+        participants: ['other@example.com'],
+        ownerId: otherUser.id
+      }
+    });
+
+    const res = await request(app)
+      .patch(`/api/meetings/${meeting.id}`)
+      .set(getHeaders())
+      .send({ title: 'Stolen' });
+
+    expect(res.status).toBe(404);
+  });
 });
+

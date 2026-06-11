@@ -7,10 +7,12 @@ import {
   getMeeting,
   listMeetings,
   deleteMeeting,
+  updateMeeting,
   createMeetingSchema,
   listMeetingsSchema,
   getMeetingSchema,
   deleteMeetingSchema,
+  updateMeetingSchema,
   transcribeMeetingAudio
 } from '../controllers/meeting.controller';
 import { analyzeMeeting, analyzeMeetingSchema } from '../controllers/analyze.controller';
@@ -234,6 +236,54 @@ router.get('/:id', validate(getMeetingSchema), getMeeting);
  *         description: Meeting not found
  */
 router.delete('/:id', validate(deleteMeetingSchema), deleteMeeting);
+
+/**
+ * @openapi
+ * /api/meetings/{id}:
+ *   patch:
+ *     summary: Update a meeting's title, date, or participants (only before analysis)
+ *     tags: [Meetings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: UUID of meeting to update
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 example: Updated Sprint Planning
+ *               participants:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: email
+ *                 example: ["alice@example.com", "carol@example.com"]
+ *               meetingDate:
+ *                 type: string
+ *                 format: date-time
+ *                 example: 2026-05-21T10:00:00Z
+ *     responses:
+ *       200:
+ *         description: Meeting updated successfully
+ *       400:
+ *         description: Validation error or meeting already analyzed
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Meeting not found
+ */
+router.patch('/:id', validate(updateMeetingSchema), updateMeeting);
 
 /**
  * @openapi
