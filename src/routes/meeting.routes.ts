@@ -6,9 +6,11 @@ import {
   createMeeting,
   getMeeting,
   listMeetings,
+  deleteMeeting,
   createMeetingSchema,
   listMeetingsSchema,
   getMeetingSchema,
+  deleteMeetingSchema,
   transcribeMeetingAudio
 } from '../controllers/meeting.controller';
 import { analyzeMeeting, analyzeMeetingSchema } from '../controllers/analyze.controller';
@@ -206,6 +208,32 @@ router.get('/', validate(listMeetingsSchema), listMeetings);
  *         description: Meeting not found
  */
 router.get('/:id', validate(getMeetingSchema), getMeeting);
+
+/**
+ * @openapi
+ * /api/meetings/{id}:
+ *   delete:
+ *     summary: Delete a meeting and all its related data
+ *     tags: [Meetings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: UUID of meeting to delete
+ *     responses:
+ *       200:
+ *         description: Meeting deleted successfully
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Meeting not found
+ */
+router.delete('/:id', validate(deleteMeetingSchema), deleteMeeting);
 
 /**
  * @openapi

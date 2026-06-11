@@ -151,4 +151,78 @@ describe('Meetings API Integration Tests', () => {
     expect(resPast.body.data.meetings).toHaveLength(1);
     expect(resPast.body.data.meetings[0].title).toBe('Past Meeting');
   });
+
+  it('should delete a meeting and return its id', async () => {
+    const meeting = await prisma.meeting.create({
+      data: {
+        title: 'Meeting To Delete',
+        meetingDate: new Date('2026-06-05T10:00:00Z'),
+        participants: ['alice@company.com'],
+        ownerId: userId
+      }
+    });
+
+    const res = await request(app)
+      .delete(`/api/meetings/${meeting.id}`)
+      .set(getHeaders());
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.id).toBe(meeting.id);
+
+    const deleted = await prisma.meeting.findUnique({ where: { id: meeting.id } });
+    expect(deleted).toBeNull();
+  });
+
+  it('should cascade delete transcript segments and analysis on meeting delete', async () => {
+    const meeting = await prisma.meeting.create({
+      data: {
+        title: 'Meeting With Children',
+        meetingDate: new Date('2026-06-05T10:00:00Z'),
+        participants: ['bob@company.com'],
+        ownerId: userId,
+        transcript: {
+          create: [{ timestamp: '00:10', speaker: 'Bob', text: 'Hello world.' }]
+        }
+      }
+    });
+
+    await request(app)
+      .delete(`/api/meetings/${meeting.id}`)
+      .set(getHeaders())
+      .expect(200);
+
+    const segments = await prisma.transcriptSegment.findMany({ where: { meetingId: meeting.id } });
+    expect(segments).toHaveLength(0);
+  });
+
+  it('should return 404 when deleting a meeting that does not exist', async () => {
+    const fakeId = '00000000-0000-0000-0000-000000000000';
+    const res = await request(app)
+      .delete(`/api/meetings/${fakeId}`)
+      .set(getHeaders());
+
+    expect(res.status).toBe(404);
+    expect(res.body.success).toBe(false);
+  });
+
+  it('should return 404 when deleting a meeting owned by another user', async () => {
+    const otherUser = await prisma.user.create({
+      data: { email: 'other@example.com', passwordHash: 'x' }
+    });
+    const meeting = await prisma.meeting.create({
+      data: {
+        title: 'Other User Meeting',
+        meetingDate: new Date(),
+        participants: ['other@example.com'],
+        ownerId: otherUser.id
+      }
+    });
+
+    const res = await request(app)
+      .delete(`/api/meetings/${meeting.id}`)
+      .set(getHeaders());
+
+    expect(res.status).toBe(404);
+  });
 });
